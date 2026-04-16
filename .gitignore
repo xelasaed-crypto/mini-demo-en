@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Logs
+*.log
+
+# Generated OSINT data
+osint_chat_history/
+osint_rate_limits/
+osint_reports/
+
+# Temporary files
+*.tmp
+*.cache
+
+# Environment / secrets
+.env
+*.env
+
+# Backup files
+*.bak
+*.old

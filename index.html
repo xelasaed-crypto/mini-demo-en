@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#050510">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="msapplication-tap-highlight" content="no">
+    <title>OSINT Global Monitor | Intelligence Dashboard</title>
+
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+
+    <!-- Fonts -->
+    <link rel="stylesheet" href="https://fontsource.org/files/orbitron/400.css">
+    <link rel="stylesheet" href="https://fontsource.org/files/orbitron/700.css">
+    <link rel="stylesheet" href="https://fontsource.org/files/rajdhani/500.css">
+    <link rel="stylesheet" href="https://fontsource.org/files/rajdhani/700.css">
+
+    <!-- Marked.js for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loader">
+        <div class="loader-ring"></div>
+        <div class="loader-text">INITIALIZING OSINT UPLINK...</div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Hidden File Input for Import -->
+    <input type="file" id="importFileInput" accept=".json">
+
+    <!-- Background -->
+    <div id="bg-layer"></div>
+    <div class="scanlines"></div>
+    <div class="grid-overlay"></div>
+
+    <!-- Map -->
+    <div id="map"></div>
+
+    <!-- Mobile Menu Button -->
+    <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu">
+        <svg viewBox="0 0 24 24" width="24" height="24">
+            <path fill="currentColor" d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/>
+        </svg>
+    </button>
+
+    <!-- Side Panel -->
+    <div class="side-panel" id="sidePanel">
+        <div class="panel-header">
+            <div class="panel-title-wrapper">
+                <div class="panel-title" id="countryName">Select Country</div>
+                <div class="panel-subtitle">OSINT Intelligence Brief</div>
+            </div>
+            <div class="panel-actions">
+                <button class="action-btn header-refresh-btn" id="refreshReportBtn" title="Force Refresh Report">
+                    🔄 Refresh
+                </button>
+                <button class="action-btn header-download-btn" id="downloadReportBtn" title="Download Report">
+                    📥 Download
+                </button>
+                <button class="close-btn" id="closeBtn">×</button>
+            </div>
+        </div>
+        <div class="panel-content">
+            <div class="live-indicator">
+                <div class="live-dot"></div>
+                <span>INTELLIGENCE FEED ACTIVE</span>
+            </div>
+
+            <div class="info-section">
+                <div class="info-title">Target Information</div>
+                <div class="info-row">
+                    <span class="info-label">ISO Code</span>
+                    <span class="info-value" id="isoCode">--</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Population</span>
+                    <span class="info-value" id="population">--</span>
+                </div>
+            </div>
+
+            <!-- Threat Level Indicator -->
+            <div class="threat-level-container" id="threatLevelContainer" style="display: none;">
+                <div class="threat-level-title">Threat Assessment</div>
+                <div class="threat-level-bar">
+                    <div class="threat-level-indicator" id="threatLevelIndicator"></div>
+                </div>
+                <div class="threat-level-labels">
+                    <span>LOW</span>
+                    <span>MODERATE</span>
+                    <span>ELEVATED</span>
+                    <span>HIGH</span>
+                    <span>CRITICAL</span>
+                </div>
+                <div class="threat-level-value" id="threatLevelValue">--</div>
+            </div>
+
+            <div class="search-toggle">
+                <input type="checkbox" id="webSearchToggle" checked>
+                <label for="webSearchToggle">⚠️ Real-time OSINT (Web Search)</label>
+            </div>
+
+            <div class="mode-toggle">
+                <button class="mode-btn active" id="reportModeBtn">Intel Brief</button>
+                <button class="mode-btn" id="chatModeBtn">Interactive Query</button>
+            </div>
+
+            <div class="action-buttons-row">
+                <button class="action-btn" id="downloadChatBtn" title="Download Chat History">
+                    📥 Download Chat
+                </button>
+                <button class="action-btn" id="clearHistoryBtn" title="Clear Query History">
+                    🗑 Clear History
+                </button>
+            </div>
+
+            <div class="history-panel" id="historyPanel" style="display: none;">
+                <div class="history-title">📜 Query History</div>
+                <div class="history-list" id="historyList"></div>
+            </div>
+
+            <!-- Data Management Panel -->
+            <div class="data-management-panel">
+                <div class="data-management-title">💾 Data Management</div>
+                <div class="data-management-buttons">
+                    <button class="data-btn" id="exportDataBtn">
+                        📤 Export All
+                    </button>
+                    <button class="data-btn" id="importDataBtn">
+                        📥 Import
+                    </button>
+                    <button class="data-btn danger" id="wipeAllDataBtn">
+                        🗑 Wipe All Data
+                    </button>
+                    <button class="data-btn" id="statsBtn">
+                        📊 Statistics
+                    </button>
+                </div>
+            </div>
+
+            <div class="chat-container">
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Content will be loaded dynamically -->
+                </div>
+                <div class="chat-input-container" id="chatInputContainer" style="display: none;">
+                    <input type="text" id="chatInput" placeholder="Enter intelligence query..." autocomplete="off">
+                    <button id="sendBtn">Query</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Panel Overlay for mobile -->
+    <div class="panel-overlay" id="panelOverlay"></div>
+
+    <!-- Puter.js -->
+    <script src="https://js.puter.com/v2/"></script>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <!-- Custom JavaScript -->
+    <script src="main.js"></script>
+</body>
+</html>
